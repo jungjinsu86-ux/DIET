@@ -777,19 +777,24 @@ function drawWeeklyChart() {
   }
 
   const maxVal = Math.max(...days.map(d => Math.max(d.consumed, d.tdee)), 1);
-  const padL=36, padR=10, padT=16, padB=30;
+  const padL=36, padR=10, padT=26, padB=30;
   const chartW = W-padL-padR, chartH = H-padT-padB;
   const barW = Math.floor(chartW/7*0.45), barGap = chartW/7;
 
   days.forEach((d, i) => {
     const x = padL + barGap*i + barGap/2 - barW/2;
 
-    // TDEE 배경 막대 (연한 색)
+    // TDEE 배경 막대 (연한 색) + 소모량 숫자
     if (d.tdee > 0) {
       const th = Math.max(2, d.tdee/maxVal*chartH);
       const ty = padT + chartH - th;
       ctx.fillStyle = d.isToday ? 'rgba(79,142,247,0.12)' : 'rgba(200,215,250,0.4)';
       roundRect(ctx, x-2, ty, barW+4, th, 4); ctx.fill();
+      // 소모량 숫자 (막대 위)
+      ctx.fillStyle = d.isToday ? '#4f8ef7' : '#9ca3af';
+      ctx.font = d.isToday ? 'bold 10px sans-serif' : '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(d.tdee, x+barW/2, ty-3);
     }
 
     // 섭취 막대
