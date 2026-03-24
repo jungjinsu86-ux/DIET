@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>칼로리 트래커</title>
+<style>
+  :root {
+    --primary: #4f8ef7;
+    --success: #2ec96f;
+    --warning: #f5a623;
+    --danger: #e84040;
+    --bg: #f0f4ff;
+    --card: #ffffff;
+    --text: #1a1f36;
+    --sub: #6b7280;
+    --border: #e5e7eb;
+    --radius: 14px;
+    --shadow: 0 2px 12px rgba(79,142,247,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* HEADER */
+  header {
+    background: var(--primary);
+    color: #fff;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 10px rgba(79,142,247,0.3);
+    position: sticky; top: 0; z-index: 100;
+  }
+  header h1 { font-size: 1.2rem; font-weight: 700; }
+  .date-nav { display: flex; align-items: center; gap: 10px; }
+  .date-nav button { background: rgba(255,255,255,0.2); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+  .date-nav button:hover { background: rgba(255,255,255,0.35); }
+  #dateDisplay { font-size: 0.95rem; font-weight: 600; min-width: 110px; text-align: center; }
+  #todayBtn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); color: #fff; padding: 5px 11px; border-radius: 12px; cursor: pointer; font-size: 0.78rem; transition: background 0.2s; }
+  #todayBtn:hover { background: rgba(255,255,255,0.3); }
+
+  main { max-width: 980px; margin: 0 auto; padding: 20px 16px; }
+
+  /* SUMMARY CARDS */
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  @media(max-width:640px) { .summary-grid { grid-template-columns: 1fr 1fr; } }
+  .summary-card {
+    background: var(--card); border-radius: var(--radius); padding: 16px;
+    box-shadow: var(--shadow); text-align: center; position: relative; overflow: hidden;
+  }
+  .summary-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .summary-card.tdee::before   { background: var(--primary); }
+  .summary-card.consumed::before { background: var(--warning); }
+  .summary-card.burned::before { background: var(--success); }
+  .summary-card.remaining::before { background: var(--danger); }
+  .card-label { font-size: 0.72rem; color: var(--sub); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .card-value { font-size: 1.55rem; font-weight: 800; }
+  .card-unit  { font-size: 0.72rem; color: var(--sub); margin-top: 2px; }
+  .summary-card.tdee .card-value     { color: var(--primary); }
+  .summary-card.consumed .card-value { color: var(--warning); }
+  .summary-card.burned .card-value   { color: var(--success); }
+  .summary-card.remaining .card-value{ color: var(--danger); }
+  .card-sub { font-size: 0.7rem; color: var(--sub); margin-top: 4px; }
+
+  /* DONUT WRAP */
+  .donut-wrap {
+    background: var(--card); border-radius: var(--radius); padding: 16px 24px;
+    box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center;
+    gap: 24px; flex-wrap: wrap; margin-bottom: 20px;
+  }
+  .donut-legend { display: flex; flex-direction: column; gap: 8px; }
+  .legend-item  { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+  .legend-dot   { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .progress-bar-wrap { width: 220px; background: #eef2ff; border-radius: 8px; height: 10px; overflow: hidden; margin-top: 10px; }
+  .progress-bar { height: 100%; border-radius: 8px; transition: width 0.5s; }
+
+  /* TWO COLUMNS */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; align-items: start; }
+  @media(max-width:680px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* CARD */
+  .card { background: var(--card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+  .card-title { font-size: 1rem; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+
+  /* SEARCH */
+  .search-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .search-row input { flex: 1; border: 1.5px solid var(--border); border-radius: 10px; padding: 9px 13px; font-size: 0.9rem; outline: none; transition: border 0.2s; }
+  .search-row input:focus { border-color: var(--primary); }
+  .btn-primary { background: var(--primary); color: #fff; border: none; border-radius: 10px; padding: 9px 16px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: background 0.2s; white-space: nowrap; }
+  .btn-primary:hover { background: #3a7ae0; }
+  .btn-primary:disabled { background: #adc8f7; cursor: not-allowed; }
+
+  /* SEARCH RESULTS */
+  #searchResults { margin-bottom: 8px; }
+  .result-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 10px; margin-bottom: 6px; gap: 8px; flex-wrap: wrap; }
+  .result-info { flex: 1; min-width: 0; }
+  .result-name { font-size: 0.88rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .result-cal  { font-size: 0.78rem; color: var(--sub); }
+  .result-add  { display: flex; align-items: center; gap: 6px; }
+  .amount-input { width: 70px; border: 1.5px solid var(--border); border-radius: 8px; padding: 5px 8px; font-size: 0.82rem; text-align: center; outline: none; }
+  .amount-input:focus { border-color: var(--primary); }
+  .btn-add { background: var(--success); color: #fff; border: none; border-radius: 8px; padding: 5px 12px; cursor: pointer; font-size: 0.82rem; font-weight: 600; transition: background 0.2s; }
+  .btn-add:hover { background: #24b060; }
+  .search-status { font-size: 0.82rem; color: var(--sub); text-align: center; padding: 8px; }
+
+  /* LOG LIST */
+  .log-list { overflow-y: visible; }
+  .log-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 8px; margin-bottom: 4px; background: #f8faff; gap: 8px; }
+  .log-item:hover { background: #eef2ff; }
+  .log-info { flex: 1; min-width: 0; }
+  .log-name   { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .log-detail { font-size: 0.75rem; color: var(--sub); }
+  .log-cal    { font-size: 0.88rem; font-weight: 700; color: var(--warning); white-space: nowrap; }
+  .btn-del { background: none; border: none; color: #ccc; cursor: pointer; font-size: 1.1rem; padding: 2px 4px; transition: color 0.2s; }
+  .btn-del:hover { color: var(--danger); }
+  .empty-msg { font-size: 0.82rem; color: var(--sub); text-align: center; padding: 20px 0; }
+
+  /* ── DAY TYPE PRESETS ── */
+  .day-type-grid { display: flex; flex-direction: column; gap: 8px; }
+  .day-type-btn {
+    display: flex; flex-direction: row; align-items: center; gap: 10px;
+    flex-wrap: nowrap;
+    border: 2px solid var(--border); border-radius: 12px;
+    padding: 0 14px; cursor: pointer; background: #fafbff;
+    transition: all 0.18s; text-align: left; width: 100%;
+    height: 62px; min-height: 62px; max-height: 62px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  .day-type-btn:hover { border-color: var(--primary); background: #eef3ff; }
+  .day-type-btn.selected {
+    border-color: var(--primary); background: #e8f0fe;
+    box-shadow: 0 0 0 3px rgba(79,142,247,0.15);
+  }
+  .dt-icon { font-size: 1rem; flex-shrink: 0; width: 56px; white-space: nowrap; overflow: hidden; line-height: 62px; }
+  .dt-info { flex: 1; min-width: 0; overflow: hidden; }
+  .dt-name { font-size: 0.85rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dt-breakdown { font-size: 0.7rem; color: var(--sub); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dt-tdee { font-size: 0.9rem; font-weight: 800; color: var(--primary); white-space: nowrap; flex-shrink: 0; }
+  .dt-check {
+    width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+    border: 2px solid var(--border); background: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; transition: all 0.18s;
+  }
+  .day-type-btn.selected .dt-check { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+  /* ── CALORIE REFERENCE PANEL ── */
+  .ref-panel {
+    background: var(--card); border-radius: var(--radius); padding: 20px;
+    box-shadow: var(--shadow); margin-bottom: 20px;
+  }
+  .ref-panel h2 { font-size: 1rem; font-weight: 700; margin-bottom: 14px; }
+  .ref-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media(max-width:520px) { .ref-grid { grid-template-columns: 1fr; } }
+  .ref-block { background: #f8faff; border-radius: 10px; padding: 12px 14px; }
+  .ref-block-title { font-size: 0.75rem; font-weight: 700; color: var(--sub); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .ref-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; padding: 4px 0; border-bottom: 1px solid #eef2ff; }
+  .ref-row:last-child { border-bottom: none; }
+  .ref-row .label { color: var(--sub); }
+  .ref-row .val   { font-weight: 700; color: var(--text); }
+  .ref-row .val.blue   { color: var(--primary); }
+  .ref-row .val.green  { color: var(--success); }
+  .ref-row .val.orange { color: var(--warning); }
+  .ref-row .val.red    { color: var(--danger); }
+  .tdee-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+  .tdee-table th { background: #f0f4ff; padding: 7px 10px; text-align: left; font-weight: 600; color: var(--sub); font-size: 0.75rem; }
+  .tdee-table td { padding: 7px 10px; border-bottom: 1px solid #f0f4ff; }
+  .tdee-table tr:last-child td { border-bottom: none; }
+  .tdee-table .tdee-val { font-weight: 800; color: var(--primary); text-align: right; }
+  .tdee-table .row-active td { background: #e8f0fe; }
+
+  /* WEEKLY CHART */
+  .weekly-section { background: var(--card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); margin-bottom: 20px; }
+  .weekly-section h2 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
+  #weeklyChart { display: block; width: 100%; }
+
+  /* SCROLLBAR */
+  .log-list::-webkit-scrollbar { width: 4px; }
+  .log-list::-webkit-scrollbar-track { background: transparent; }
+  .log-list::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+
+  /* BADGE */
+  .badge { display: inline-block; font-size: 0.65rem; padding: 1px 5px; border-radius: 4px; font-weight: 600; vertical-align: middle; margin-left: 4px; }
+  .badge.db  { background: #e8f0fe; color: var(--primary); }
+  .badge.api { background: #e6f9ee; color: var(--success); }
+
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #ddd; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .section-title { font-size: 0.82rem; font-weight: 700; color: var(--sub); margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🥗 칼로리 트래커</h1>
+  <div class="date-nav">
+    <button onclick="navigateDate(-1)">&#8249;</button>
+    <span id="dateDisplay"></span>
+    <button onclick="navigateDate(1)">&#8250;</button>
+  </div>
+  <button id="todayBtn" onclick="goToday()">오늘</button>
+</header>
+
+<main>
+
+  <!-- SUMMARY CARDS -->
+  <div class="summary-grid">
+    <div class="summary-card tdee">
+      <div class="card-label">오늘 TDEE</div>
+      <div class="card-value" id="summTdee">-</div>
+      <div class="card-unit">kcal</div>
+      <div class="card-sub" id="summDayType">운동 타입 선택 필요</div>
+    </div>
+    <div class="summary-card consumed">
+      <div class="card-label">섭취</div>
+      <div class="card-value" id="summConsumed">0</div>
+      <div class="card-unit">kcal</div>
+    </div>
+    <div class="summary-card burned">
+      <div class="card-label">운동 소모</div>
+      <div class="card-value" id="summBurned">-</div>
+      <div class="card-unit">kcal</div>
+    </div>
+    <div class="summary-card remaining">
+      <div class="card-label">남은 칼로리</div>
+      <div class="card-value" id="summRemaining">-</div>
+      <div class="card-unit">kcal</div>
+    </div>
+  </div>
+
+  <!-- DONUT + PROGRESS -->
+  <div class="donut-wrap">
+    <canvas id="donutChart" width="130" height="130"></canvas>
+    <div class="donut-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#f5a623"></div> 섭취 칼로리</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e8eef8"></div> 남은 여유</div>
+      <div style="margin-top:8px; font-size:0.82rem; color:var(--sub)" id="progressLabel">-</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progressBar" style="width:0%;background:var(--success)"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TWO COLUMNS -->
+  <div class="two-col">
+
+    <!-- FOOD SECTION -->
+    <div class="card">
+      <div class="card-title">🍽 음식 추가</div>
+      <div class="search-row">
+        <input type="text" id="foodSearch" placeholder="음식 이름 검색..." onkeydown="if(event.key==='Enter')doSearch()">
+        <button class="btn-primary" id="searchBtn" onclick="doSearch()">검색</button>
+      </div>
+      <div id="searchResults"></div>
+      <div class="section-title" style="margin-top:10px;">📋 오늘 식단</div>
+      <div class="log-list" id="foodLog"></div>
+    </div>
+
+    <!-- DAY TYPE SECTION -->
+    <div class="card">
+      <div class="card-title">🏋️ 오늘의 운동 타입</div>
+      <div class="day-type-grid" id="dayTypeGrid"></div>
+    </div>
+
+  </div>
+
+  <!-- CALORIE REFERENCE PANEL -->
+  <div class="ref-panel">
+    <h2>📌 나의 고정 칼로리 기준값</h2>
+    <div class="ref-grid">
+
+      <div class="ref-block">
+        <div class="ref-block-title">① 기초값</div>
+        <div class="ref-row"><span class="label">BMR (기초대사량)</span><span class="val blue">1,900 kcal</span></div>
+        <div class="ref-row"><span class="label">NEAT · 운동 없는 날</span><span class="val">650 kcal</span></div>
+        <div class="ref-row"><span class="label">NEAT · 운동 있는 날</span><span class="val">700 kcal</span></div>
+      </div>
+
+      <div class="ref-block">
+        <div class="ref-block-title">② 운동별 소모</div>
+        <div class="ref-row"><span class="label">💪 웨이트 트레이닝</span><span class="val green">100 kcal</span></div>
+        <div class="ref-row"><span class="label">🏃 유산소 (30분)</span><span class="val green">420 kcal</span></div>
+        <div class="ref-row"><span class="label">⚽ 풋살 (2시간)</span><span class="val green">1,000 kcal</span></div>
+      </div>
+
+    </div>
+
+    <!-- TDEE TABLE -->
+    <div style="margin-top:14px;">
+      <div class="ref-block-title" style="margin-bottom:8px;">③ 하루 총소모 TDEE (고정값)</div>
+      <table class="tdee-table" id="tdeeTable">
+        <thead>
+          <tr><th>운동 타입</th><th>계산식</th><th style="text-align:right">TDEE</th></tr>
+        </thead>
+        <tbody id="tdeeTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- WEEKLY CHART -->
+  <div class="weekly-section">
+    <h2>📊 최근 7일 섭취 현황</h2>
+    <canvas id="weeklyChart" height="160"></canvas>
+  </div>
+
+</main>
+
+<script>
+// ─────────────────────────────────────────────
+// 1. 고정 칼로리 상수
+// ─────────────────────────────────────────────
+const BMR  = 1900;
+const NEAT_REST    = 650;   // 운동 없는 날
+const NEAT_ACTIVE  = 700;   // 운동 있는 날
+const CAL_WEIGHT   = 100;   // 웨이트
+const CAL_CARDIO   = 420;   // 유산소 30분
+const CAL_FUTSAL   = 1000;  // 풋살 2시간
+
+// ─────────────────────────────────────────────
+// 2. 운동 타입 프리셋 (5종)
+// ─────────────────────────────────────────────
+const DAY_TYPES = [
+  {
+    id: 'none',
+    icon: '❌',
+    name: '운동 없는 날',
+    exerciseCal: 0,
+    tdee: BMR + NEAT_REST,
+    breakdown: `BMR 1,900 + NEAT 650`,
+    formula: `1,900 + 650`,
+  },
+  {
+    id: 'weight',
+    icon: '💪',
+    name: '근력 운동',
+    exerciseCal: CAL_WEIGHT,
+    tdee: BMR + NEAT_ACTIVE + CAL_WEIGHT,
+    breakdown: `BMR + NEAT 700 + 웨이트 100`,
+    formula: `1,900 + 700 + 100`,
+  },
+  {
+    id: 'weight_cardio',
+    icon: '💪🏃',
+    name: '근력 + 유산소',
+    exerciseCal: CAL_WEIGHT + CAL_CARDIO,
+    tdee: BMR + NEAT_ACTIVE + CAL_WEIGHT + CAL_CARDIO,
+    breakdown: `BMR + NEAT 700 + 웨이트 100 + 유산소 420`,
+    formula: `1,900 + 700 + 100 + 420`,
+  },
+  {
+    id: 'weight_futsal',
+    icon: '💪⚽',
+    name: '근력 + 풋살',
+    exerciseCal: CAL_WEIGHT + CAL_FUTSAL,
+    tdee: BMR + NEAT_ACTIVE + CAL_WEIGHT + CAL_FUTSAL,
+    breakdown: `BMR + NEAT 700 + 웨이트 100 + 풋살 1,000`,
+    formula: `1,900 + 700 + 100 + 1,000`,
+  },
+  {
+    id: 'all',
+    icon: '💪🏃⚽',
+    name: '근력 + 유산소 + 풋살',
+    exerciseCal: CAL_WEIGHT + CAL_CARDIO + CAL_FUTSAL,
+    tdee: BMR + NEAT_ACTIVE + CAL_WEIGHT + CAL_CARDIO + CAL_FUTSAL,
+    breakdown: `BMR + NEAT 700 + 웨이트 100 + 유산소 420 + 풋살 1,000`,
+    formula: `1,900 + 700 + 100 + 420 + 1,000`,
+  },
+];
+
+// ─────────────────────────────────────────────
+// 3. 한국 음식 DB (50개)
+// ─────────────────────────────────────────────
+const KOREAN_DB = [
+  {id:'k01', name:'김치찌개', aliases:['김치국'], cal:45, def:300},
+  {id:'k02', name:'된장찌개', aliases:['된장국','miso'], cal:50, def:300},
+  {id:'k03', name:'순두부찌개', aliases:['순두부'], cal:55, def:350},
+  {id:'k04', name:'부대찌개', aliases:['존슨탕','부대탕'], cal:95, def:400},
+  {id:'k05', name:'설렁탕', aliases:['곰탕'], cal:58, def:500},
+  {id:'k06', name:'삼계탕', aliases:['닭백숙'], cal:120, def:600},
+  {id:'k07', name:'미역국', aliases:['미역'], cal:20, def:300},
+  {id:'k08', name:'갈비탕', aliases:['갈비국'], cal:85, def:400},
+  {id:'k09', name:'흰쌀밥', aliases:['밥','공기밥','쌀밥'], cal:130, def:210},
+  {id:'k10', name:'비빔밥', aliases:['bibimbap'], cal:130, def:450},
+  {id:'k11', name:'볶음밥', aliases:['fried rice'], cal:180, def:300},
+  {id:'k12', name:'김밥', aliases:['gimbap','롤'], cal:160, def:200},
+  {id:'k13', name:'잡채밥', aliases:['잡채'], cal:145, def:350},
+  {id:'k14', name:'오므라이스', aliases:['omelet rice'], cal:155, def:300},
+  {id:'k15', name:'소고기덮밥', aliases:['덮밥','규동'], cal:160, def:350},
+  {id:'k16', name:'현미밥', aliases:['현미'], cal:110, def:210},
+  {id:'k17', name:'라면', aliases:['봉지라면','컵라면','ramen'], cal:430, def:120},
+  {id:'k18', name:'짜장면', aliases:['자장면'], cal:175, def:550},
+  {id:'k19', name:'짬뽕', aliases:['jjambbong'], cal:90, def:700},
+  {id:'k20', name:'냉면', aliases:['물냉면','비빔냉면'], cal:105, def:450},
+  {id:'k21', name:'칼국수', aliases:['kalguksu'], cal:95, def:500},
+  {id:'k22', name:'떡볶이', aliases:['떡볶기','tteokbokki'], cal:145, def:300},
+  {id:'k23', name:'수제비', aliases:['sujebi'], cal:90, def:400},
+  {id:'k24', name:'삼겹살', aliases:['삽겹살','pork belly'], cal:331, def:200},
+  {id:'k25', name:'불고기', aliases:['bulgogi'], cal:177, def:200},
+  {id:'k26', name:'갈비', aliases:['소갈비','돼지갈비'], cal:290, def:250},
+  {id:'k27', name:'닭갈비', aliases:['dakgalbi'], cal:155, def:300},
+  {id:'k28', name:'제육볶음', aliases:['돼지볶음'], cal:220, def:250},
+  {id:'k29', name:'후라이드치킨', aliases:['치킨','fried chicken'], cal:290, def:200},
+  {id:'k30', name:'족발', aliases:['jokbal'], cal:225, def:250},
+  {id:'k31', name:'보쌈', aliases:['수육','bossam'], cal:190, def:200},
+  {id:'k32', name:'순대', aliases:['sundae'], cal:165, def:200},
+  {id:'k33', name:'야채튀김', aliases:['튀김','tempura'], cal:220, def:150},
+  {id:'k34', name:'핫도그', aliases:['콘도그','corn dog'], cal:280, def:100},
+  {id:'k35', name:'붕어빵', aliases:['잉어빵'], cal:235, def:100},
+  {id:'k36', name:'호떡', aliases:['hotteok'], cal:300, def:90},
+  {id:'k37', name:'해물파전', aliases:['파전','해물전'], cal:185, def:200},
+  {id:'k38', name:'어묵', aliases:['오뎅','fish cake'], cal:100, def:200},
+  {id:'k39', name:'만두', aliases:['군만두','찐만두','dumpling'], cal:200, def:200},
+  {id:'k40', name:'피자', aliases:['pizza'], cal:270, def:200},
+  {id:'k41', name:'햄버거', aliases:['버거','burger'], cal:255, def:200},
+  {id:'k42', name:'샌드위치', aliases:['sandwich'], cal:220, def:200},
+  {id:'k43', name:'샐러드', aliases:['그린샐러드','salad'], cal:25, def:200},
+  {id:'k44', name:'계란후라이', aliases:['달걀후라이','fried egg'], cal:195, def:60},
+  {id:'k45', name:'두부조림', aliases:['두부'], cal:120, def:200},
+  {id:'k46', name:'콩나물무침', aliases:['콩나물'], cal:35, def:150},
+  {id:'k47', name:'아메리카노', aliases:['커피','americano','coffee'], cal:5, def:350},
+  {id:'k48', name:'카페라떼', aliases:['라떼','latte'], cal:55, def:350},
+  {id:'k49', name:'오렌지주스', aliases:['주스','orange juice'], cal:45, def:200},
+  {id:'k50', name:'우유', aliases:['흰우유','milk'], cal:61, def:200},
+];
+
+// ─────────────────────────────────────────────
+// 4. 상태
+// ─────────────────────────────────────────────
+let currentDate = new Date();
+currentDate.setHours(0,0,0,0);
+
+function dateKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `calorie_${y}-${m}-${day}`;
+}
+function loadDay(key) {
+  return JSON.parse(localStorage.getItem(key) || 'null') || {date: key.replace('calorie_',''), foods:[], dayTypeId: null};
+}
+function saveDay(key, data) {
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+// ─────────────────────────────────────────────
+// 5. 초기화
+// ─────────────────────────────────────────────
+function initApp() {
+  buildDayTypeGrid();
+  buildTdeeTable();
+  renderAll();
+}
+
+// ─────────────────────────────────────────────
+// 6. 운동 타입 그리드 빌드
+// ─────────────────────────────────────────────
+function buildDayTypeGrid() {
+  const grid = document.getElementById('dayTypeGrid');
+  grid.innerHTML = DAY_TYPES.map(dt => `
+    <button class="day-type-btn" id="dtbtn_${dt.id}" onclick="selectDayType('${dt.id}')">
+      <span class="dt-icon">${dt.icon}</span>
+      <span class="dt-info">
+        <div class="dt-name">${dt.name}</div>
+        <div class="dt-breakdown">${dt.breakdown}</div>
+      </span>
+      <span class="dt-tdee">${dt.tdee.toLocaleString()} kcal</span>
+      <span class="dt-check">✓</span>
+    </button>
+  `).join('');
+}
+
+function buildTdeeTable() {
+  const tbody = document.getElementById('tdeeTbody');
+  tbody.innerHTML = DAY_TYPES.map(dt => `
+    <tr id="tdeerow_${dt.id}">
+      <td>${dt.icon} ${dt.name}</td>
+      <td style="color:var(--sub);font-size:0.78rem">${dt.formula} = </td>
+      <td class="tdee-val">${dt.tdee.toLocaleString()} kcal</td>
+    </tr>
+  `).join('');
+}
+
+function selectDayType(id) {
+  const key = dateKey(currentDate);
+  const dayData = loadDay(key);
+  dayData.dayTypeId = dayData.dayTypeId === id ? null : id; // 재클릭시 해제
+  saveDay(key, dayData);
+  renderAll();
+}
+
+// ─────────────────────────────────────────────
+// 7. 날짜 표시 / 이동
+// ─────────────────────────────────────────────
+function formatDate(d) {
+  const days = ['일','월','화','수','목','금','토'];
+  const m = d.getMonth()+1;
+  const day = d.getDate();
+  const wd = days[d.getDay()];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const suffix = d.getTime() === today.getTime() ? ' (오늘)' : '';
+  return `${m}월 ${day}일 (${wd})${suffix}`;
+}
+function updateDateDisplay() {
+  document.getElementById('dateDisplay').textContent = formatDate(currentDate);
+}
+function navigateDate(dir) {
+  currentDate = new Date(currentDate.getTime() + dir * 86400000);
+  renderAll();
+}
+function goToday() {
+  currentDate = new Date(); currentDate.setHours(0,0,0,0);
+  renderAll();
+}
+
+// ─────────────────────────────────────────────
+// 8. 전체 렌더
+// ─────────────────────────────────────────────
+function renderAll() {
+  updateDateDisplay();
+  const key = dateKey(currentDate);
+  const dayData = loadDay(key);
+  renderFoodLog(dayData);
+  renderDayTypeSelection(dayData);
+  updateSummary(dayData);
+  drawWeeklyChart();
+  document.getElementById('searchResults').innerHTML = '';
+  document.getElementById('foodSearch').value = '';
+}
+
+function renderDayTypeSelection(dayData) {
+  DAY_TYPES.forEach(dt => {
+    const btn = document.getElementById('dtbtn_' + dt.id);
+    if (btn) btn.classList.toggle('selected', dayData.dayTypeId === dt.id);
+    const row = document.getElementById('tdeerow_' + dt.id);
+    if (row) row.classList.toggle('row-active', dayData.dayTypeId === dt.id);
+  });
+}
+
+// ─────────────────────────────────────────────
+// 9. 요약 카드 + 도넛
+// ─────────────────────────────────────────────
+function updateSummary(dayData) {
+  const dt = dayData.dayTypeId ? DAY_TYPES.find(d => d.id === dayData.dayTypeId) : null;
+  const tdee = dt ? dt.tdee : 0;
+  const exerciseCal = dt ? dt.exerciseCal : 0;
+  const consumed = dayData.foods.reduce((s,f) => s + f.totalCalories, 0);
+  const remaining = tdee > 0 ? tdee - consumed : 0;
+
+  // TDEE 카드
+  document.getElementById('summTdee').textContent = tdee > 0 ? tdee.toLocaleString() : '-';
+  document.getElementById('summDayType').textContent = dt ? dt.icon + ' ' + dt.name : '운동 타입 선택 필요';
+
+  // 섭취
+  document.getElementById('summConsumed').textContent = consumed.toLocaleString();
+
+  // 운동 소모
+  document.getElementById('summBurned').textContent = dt ? exerciseCal.toLocaleString() : '-';
+
+  // 남은 칼로리
+  const remEl = document.getElementById('summRemaining');
+  if (!dt) {
+    remEl.textContent = '-';
+    remEl.style.color = 'var(--danger)';
+  } else {
+    remEl.textContent = remaining.toLocaleString();
+    remEl.style.color = remaining < 0 ? 'var(--danger)' : remaining < tdee * 0.1 ? 'var(--warning)' : 'var(--success)';
+  }
+
+  drawDonutChart(consumed, tdee);
+
+  if (tdee > 0) {
+    const pct = Math.min(100, Math.round(consumed / tdee * 100));
+    document.getElementById('progressLabel').textContent = `TDEE 대비 ${pct}% 섭취`;
+    const bar = document.getElementById('progressBar');
+    bar.style.width = pct + '%';
+    bar.style.background = pct >= 100 ? 'var(--danger)' : pct >= 90 ? 'var(--warning)' : 'var(--success)';
+  } else {
+    document.getElementById('progressLabel').textContent = '운동 타입을 선택해주세요';
+    document.getElementById('progressBar').style.width = '0%';
+  }
+}
+
+function drawDonutChart(consumed, tdee) {
+  const canvas = document.getElementById('donutChart');
+  const ctx = canvas.getContext('2d');
+  const W = 130, H = 130, cx = W/2, cy = H/2, r = 52, ri = 34;
+  ctx.clearRect(0,0,W,H);
+
+  const total = tdee || (consumed + 1);
+  const rest  = Math.max(0, total - consumed);
+  const cRatio = Math.min(1, consumed / total);
+  const rRatio = rest / total;
+
+  const segs = [
+    {ratio: cRatio, color: '#f5a623'},
+    {ratio: rRatio, color: '#e8eef8'},
+  ];
+  let start = -Math.PI / 2;
+  segs.forEach(seg => {
+    if (seg.ratio <= 0) return;
+    const angle = seg.ratio * 2 * Math.PI;
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.arc(cx, cy, r, start, start + angle);
+    ctx.closePath(); ctx.fillStyle = seg.color; ctx.fill();
+    start += angle;
+  });
+  // 초과분 빨강 테두리
+  if (consumed > total) {
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2*Math.PI);
+    ctx.strokeStyle = '#e84040'; ctx.lineWidth = 4; ctx.stroke();
+  }
+
+  ctx.beginPath(); ctx.arc(cx, cy, ri, 0, 2*Math.PI);
+  ctx.fillStyle = '#fff'; ctx.fill();
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (tdee > 0) {
+    const pct = Math.round(consumed / tdee * 100);
+    ctx.fillStyle = '#1a1f36'; ctx.font = 'bold 14px sans-serif';
+    ctx.fillText(pct + '%', cx, cy - 7);
+    ctx.fillStyle = '#6b7280'; ctx.font = '10px sans-serif';
+    ctx.fillText('섭취', cx, cy + 8);
+  } else {
+    ctx.fillStyle = '#6b7280'; ctx.font = '10px sans-serif';
+    ctx.fillText('선택필요', cx, cy);
+  }
+}
+
+// ─────────────────────────────────────────────
+// 10. 음식 로그
+// ─────────────────────────────────────────────
+function renderFoodLog(dayData) {
+  const el = document.getElementById('foodLog');
+  if (!dayData.foods.length) { el.innerHTML = '<div class="empty-msg">아직 추가된 음식이 없습니다</div>'; return; }
+  el.innerHTML = dayData.foods.map(f => `
+    <div class="log-item">
+      <div class="log-info">
+        <div class="log-name">${f.name} <span class="badge ${f.source}">${f.source === 'db' ? 'DB' : 'API'}</span></div>
+        <div class="log-detail">${f.amount}g × ${f.caloriesPer100g}kcal/100g</div>
+      </div>
+      <span class="log-cal">${f.totalCalories} kcal</span>
+      <button class="btn-del" onclick="removeFoodEntry('${f.id}')">×</button>
+    </div>
+  `).join('');
+}
+
+function addFoodEntry(food, amount) {
+  const key = dateKey(currentDate);
+  const dayData = loadDay(key);
+  dayData.foods.push({
+    id: 'f_' + Date.now() + Math.random().toString(36).slice(2,6),
+    name: food.name,
+    caloriesPer100g: food.cal,
+    amount: amount,
+    totalCalories: Math.round(food.cal * amount / 100),
+    source: food.source || 'db',
+    addedAt: new Date().toISOString(),
+  });
+  saveDay(key, dayData);
+  renderFoodLog(dayData);
+  updateSummary(dayData);
+  drawWeeklyChart();
+  document.getElementById('searchResults').innerHTML = '';
+  document.getElementById('foodSearch').value = '';
+}
+
+function removeFoodEntry(id) {
+  const key = dateKey(currentDate);
+  const dayData = loadDay(key);
+  dayData.foods = dayData.foods.filter(f => f.id !== id);
+  saveDay(key, dayData);
+  renderFoodLog(dayData);
+  updateSummary(dayData);
+  drawWeeklyChart();
+}
+
+// ─────────────────────────────────────────────
+// 11. 음식 검색
+// ─────────────────────────────────────────────
+function isKorean(str) { return /[가-힣]/.test(str); }
+
+function searchKoreanDB(q) {
+  const lower = q.toLowerCase();
+  return KOREAN_DB.filter(f =>
+    f.name.includes(q) || f.name.toLowerCase().includes(lower) ||
+    f.aliases.some(a => a.toLowerCase().includes(lower))
+  ).slice(0, 6).map(f => ({...f, source:'db'}));
+}
+
+async function fetchOpenFoodFacts(query) {
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), 5000);
+  try {
+    const params = new URLSearchParams({search_terms: query, json:'1', page_size:'5', fields:'product_name,nutriments', action:'process', search_simple:'1'});
+    const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?${params}`, {signal: controller.signal});
+    clearTimeout(tid);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.products||[]).filter(p => p.product_name && p.nutriments).map(p => {
+      const cal = p.nutriments['energy-kcal_100g'] || (p.nutriments['energy_100g'] ? Math.round(p.nutriments['energy_100g']/4.184) : null);
+      if (!cal || cal <= 0) return null;
+      return {id:'api_'+Math.random().toString(36).slice(2), name: p.product_name, cal: Math.round(cal), def:100, source:'api'};
+    }).filter(Boolean).slice(0,5);
+  } catch(e) { clearTimeout(tid); return []; }
+}
+
+async function doSearch() {
+  const q = document.getElementById('foodSearch').value.trim();
+  if (!q) return;
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true;
+  const resultsEl = document.getElementById('searchResults');
+  resultsEl.innerHTML = '<div class="search-status"><span class="spinner"></span>검색 중...</div>';
+
+  let results = [];
+  if (isKorean(q)) {
+    results = searchKoreanDB(q);
+    if (results.length < 3) {
+      const api = await fetchOpenFoodFacts(q);
+      results = [...results, ...api].slice(0,6);
+    }
+  } else {
+    const api = await fetchOpenFoodFacts(q);
+    results = api.length ? api : searchKoreanDB(q);
+  }
+  btn.disabled = false;
+
+  if (!results.length) {
+    resultsEl.innerHTML = '<div class="search-status">검색 결과가 없습니다. 다른 키워드로 시도해보세요.</div>';
+    return;
+  }
+  resultsEl.innerHTML = results.map((f, i) => `
+    <div class="result-item">
+      <div class="result-info">
+        <div class="result-name">${f.name} <span class="badge ${f.source}">${f.source==='db'?'DB':'API'}</span></div>
+        <div class="result-cal">${f.cal} kcal / 100g</div>
+      </div>
+      <div class="result-add">
+        <input class="amount-input" type="number" id="amt_${i}" value="${f.def||100}" min="1" max="5000"> g
+        <button class="btn-add" onclick="addFromResult(${i})">추가</button>
+      </div>
+    </div>
+  `).join('');
+  window._searchResults = results;
+}
+
+function addFromResult(i) {
+  addFoodEntry(window._searchResults[i], parseInt(document.getElementById(`amt_${i}`).value)||100);
+}
+
+// ─────────────────────────────────────────────
+// 12. 주간 차트
+// ─────────────────────────────────────────────
+function drawWeeklyChart() {
+  const canvas = document.getElementById('weeklyChart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 600;
+  canvas.width = W;
+  const H = 160; canvas.height = H;
+  ctx.clearRect(0,0,W,H);
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today.getTime() - i * 86400000);
+    const k = dateKey(d);
+    const data = loadDay(k);
+    const consumed = data.foods.reduce((s,f) => s+f.totalCalories, 0);
+    const dt = data.dayTypeId ? DAY_TYPES.find(x => x.id === data.dayTypeId) : null;
+    const tdee = dt ? dt.tdee : 0;
+    const isToday = i === 0;
+    const isSelected = dateKey(d) === dateKey(currentDate);
+    days.push({label: `${d.getMonth()+1}/${d.getDate()}`, consumed, tdee, isToday, isSelected});
+  }
+
+  const maxVal = Math.max(...days.map(d => Math.max(d.consumed, d.tdee)), 1);
+  const padL=36, padR=10, padT=16, padB=30;
+  const chartW = W-padL-padR, chartH = H-padT-padB;
+  const barW = Math.floor(chartW/7*0.45), barGap = chartW/7;
+
+  days.forEach((d, i) => {
+    const x = padL + barGap*i + barGap/2 - barW/2;
+
+    // TDEE 배경 막대 (연한 색)
+    if (d.tdee > 0) {
+      const th = Math.max(2, d.tdee/maxVal*chartH);
+      const ty = padT + chartH - th;
+      ctx.fillStyle = d.isToday ? 'rgba(79,142,247,0.12)' : 'rgba(200,215,250,0.4)';
+      roundRect(ctx, x-2, ty, barW+4, th, 4); ctx.fill();
+    }
+
+    // 섭취 막대
+    const barH = d.consumed>0 ? Math.max(3, d.consumed/maxVal*chartH) : 0;
+    const y = padT + chartH - barH;
+    const over = d.tdee>0 && d.consumed>d.tdee;
+    ctx.fillStyle = d.isToday ? (over?'#e84040':'#4f8ef7') : d.isSelected ? (over?'#f06a6a':'#7eb3f7') : (over?'#f5a0a0':'#b3cdfb');
+    if (barH>0) { roundRect(ctx, x, y, barW, barH, 4); ctx.fill(); }
+
+    // 날짜 라벨
+    ctx.fillStyle = d.isToday ? '#1a1f36' : d.isSelected ? '#4f8ef7' : '#6b7280';
+    ctx.font = (d.isToday || d.isSelected) ? 'bold 11px sans-serif' : '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(d.label, x+barW/2, H-padB+14);
+
+    // 섭취값 라벨
+    if (d.consumed>0) {
+      ctx.fillStyle = '#1a1f36'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(d.consumed, x+barW/2, y-3);
+    }
+  });
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h); ctx.lineTo(x,y+h); ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+}
+
+let resizeTimer;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(drawWeeklyChart, 200); });
+
+initApp();
+</script>
+</body>
+</html>
