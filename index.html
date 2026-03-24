@@ -183,13 +183,96 @@
 
   /* BADGE */
   .badge { display: inline-block; font-size: 0.65rem; padding: 1px 5px; border-radius: 4px; font-weight: 600; vertical-align: middle; margin-left: 4px; }
-  .badge.db  { background: #e8f0fe; color: var(--primary); }
-  .badge.api { background: #e6f9ee; color: var(--success); }
+  .badge.db     { background: #e8f0fe; color: var(--primary); }
+  .badge.api    { background: #e6f9ee; color: var(--success); }
+  .badge.manual { background: #fff3e0; color: var(--warning); }
 
   .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #ddd; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .section-title { font-size: 0.82rem; font-weight: 700; color: var(--sub); margin-bottom: 8px; }
+
+  /* FOOD TABS */
+  .food-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .food-tab {
+    flex: 1; padding: 8px; border: 1.5px solid var(--border); border-radius: 10px;
+    background: #fafbff; color: var(--sub); font-size: 0.85rem; font-weight: 600;
+    cursor: pointer; transition: all 0.18s;
+  }
+  .food-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .food-tab:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+
+  /* MANUAL INPUT */
+  .manual-row { display: flex; align-items: center; gap: 8px; }
+  .manual-input-name { flex: 1; border: 1.5px solid var(--border); border-radius: 10px; padding: 9px 13px; font-size: 0.9rem; outline: none; transition: border 0.2s; width: 100%; }
+  .manual-input-name:focus { border-color: var(--primary); }
+  .manual-input-cal { flex: 1; border: 1.5px solid var(--border); border-radius: 10px; padding: 9px 13px; font-size: 0.9rem; outline: none; transition: border 0.2s; min-width: 0; }
+  .manual-input-cal:focus { border-color: var(--primary); }
+  .manual-unit { font-size: 0.85rem; color: var(--sub); white-space: nowrap; flex-shrink: 0; }
+
+  /* ── MOBILE OPTIMIZATION ── */
+  @media(max-width: 480px) {
+    /* Header */
+    header { padding: 10px 12px; }
+    header h1 { font-size: 1rem; }
+    #dateDisplay { font-size: 0.82rem; min-width: 90px; }
+    #todayBtn { padding: 4px 8px; font-size: 0.72rem; }
+    .date-nav button { width: 28px; height: 28px; font-size: 1rem; }
+    .date-nav { gap: 6px; }
+
+    /* Main padding */
+    main { padding: 12px 10px; }
+
+    /* Summary cards */
+    .summary-grid { gap: 8px; margin-bottom: 12px; }
+    .summary-card { padding: 12px 8px; }
+    .card-value { font-size: 1.2rem; }
+    .card-label { font-size: 0.65rem; }
+    .card-unit  { font-size: 0.65rem; }
+    .card-sub   { font-size: 0.62rem; }
+
+    /* Donut */
+    .donut-wrap { padding: 12px; gap: 16px; }
+    #donutChart { width: 100px !important; height: 100px !important; }
+
+    /* Day type buttons */
+    .day-type-btn { padding: 0 10px; gap: 8px; height: 56px; min-height: 56px; max-height: 56px; width: 100%; overflow: hidden; }
+    .dt-icon { width: 36px; font-size: 0.9rem; line-height: 56px; }
+    .dt-info { overflow: hidden; }
+    .dt-name { font-size: 0.8rem; }
+    .dt-breakdown { display: none; }
+    .dt-tdee { font-size: 0.82rem; flex-shrink: 0; }
+    .dt-check { flex-shrink: 0; }
+
+    /* Cards */
+    .card { padding: 14px 12px; }
+    .card-title { font-size: 0.92rem; }
+
+    /* TDEE table */
+    .tdee-table { font-size: 0.72rem; }
+    .tdee-table th, .tdee-table td { padding: 5px 4px; }
+    .tdee-table td:nth-child(2) { display: none; }
+    .tdee-table th:nth-child(2) { display: none; }
+    .ref-block { padding: 10px; }
+
+    /* Search */
+    .search-row input { font-size: 0.85rem; padding: 10px 10px; }
+    .btn-primary { padding: 10px 12px; font-size: 0.82rem; }
+    .btn-add { padding: 8px 12px; font-size: 0.82rem; }
+    .amount-input { width: 60px; }
+
+    /* Log items */
+    .log-name { font-size: 0.82rem; }
+    .log-detail { font-size: 0.7rem; }
+    .log-cal { font-size: 0.82rem; }
+
+    /* Weekly chart */
+    .weekly-section { padding: 14px 10px; }
+    #weeklyChart { height: 140px; }
+
+    /* Ref panel */
+    .ref-panel { padding: 14px 12px; }
+  }
 </style>
 </head>
 <body>
@@ -250,11 +333,35 @@
     <!-- FOOD SECTION -->
     <div class="card">
       <div class="card-title">🍽 음식 추가</div>
-      <div class="search-row">
-        <input type="text" id="foodSearch" placeholder="음식 이름 검색..." onkeydown="if(event.key==='Enter')doSearch()">
-        <button class="btn-primary" id="searchBtn" onclick="doSearch()">검색</button>
+
+      <!-- 탭 -->
+      <div class="food-tabs">
+        <button class="food-tab active" id="tabSearch" onclick="switchFoodTab('search')">🔍 검색</button>
+        <button class="food-tab" id="tabManual" onclick="switchFoodTab('manual')">✏️ 직접 입력</button>
       </div>
-      <div id="searchResults"></div>
+
+      <!-- 검색 탭 -->
+      <div id="panelSearch">
+        <div class="search-row">
+          <input type="text" id="foodSearch" placeholder="음식 이름 검색..." onkeydown="if(event.key==='Enter')doSearch()">
+          <button class="btn-primary" id="searchBtn" onclick="doSearch()">검색</button>
+        </div>
+        <div id="searchResults"></div>
+      </div>
+
+      <!-- 직접 입력 탭 -->
+      <div id="panelManual" style="display:none;">
+        <div class="manual-row">
+          <input type="text" id="manualName" placeholder="음식 이름" class="manual-input-name">
+        </div>
+        <div class="manual-row" style="margin-top:8px;">
+          <input type="number" id="manualCal" placeholder="칼로리 (kcal)" class="manual-input-cal" min="1">
+          <span class="manual-unit">kcal</span>
+          <button class="btn-primary" onclick="addManualFood()">추가</button>
+        </div>
+        <div id="manualMsg" class="search-status" style="display:none;"></div>
+      </div>
+
       <div class="section-title" style="margin-top:10px;">📋 오늘 식단</div>
       <div class="log-list" id="foodLog"></div>
     </div>
@@ -638,8 +745,8 @@ function renderFoodLog(dayData) {
   el.innerHTML = dayData.foods.map(f => `
     <div class="log-item">
       <div class="log-info">
-        <div class="log-name">${f.name} <span class="badge ${f.source}">${f.source === 'db' ? 'DB' : 'API'}</span></div>
-        <div class="log-detail">${f.amount}g × ${f.caloriesPer100g}kcal/100g</div>
+        <div class="log-name">${f.name} <span class="badge ${f.source}">${f.source === 'db' ? 'DB' : f.source === 'manual' ? '직접입력' : 'API'}</span></div>
+        <div class="log-detail">${f.source === 'manual' ? '직접 입력' : `${f.amount}g × ${f.caloriesPer100g}kcal/100g`}</div>
       </div>
       <span class="log-cal">${f.totalCalories} kcal</span>
       <button class="btn-del" onclick="removeFoodEntry('${f.id}')">×</button>
@@ -647,15 +754,16 @@ function renderFoodLog(dayData) {
   `).join('');
 }
 
-function addFoodEntry(food, amount) {
+function addFoodEntry(food, amount, totalOverride) {
   const key = dateKey(currentDate);
   const dayData = loadDay(key);
+  const total = totalOverride !== undefined ? totalOverride : Math.round((food.cal||food.caloriesPer100g) * amount / 100);
   dayData.foods.push({
     id: 'f_' + Date.now() + Math.random().toString(36).slice(2,6),
     name: food.name,
-    caloriesPer100g: food.cal,
+    caloriesPer100g: food.cal || food.caloriesPer100g,
     amount: amount,
-    totalCalories: Math.round(food.cal * amount / 100),
+    totalCalories: total,
     source: food.source || 'db',
     addedAt: new Date().toISOString(),
   });
@@ -664,7 +772,7 @@ function addFoodEntry(food, amount) {
   updateSummary(dayData);
   drawWeeklyChart();
   document.getElementById('searchResults').innerHTML = '';
-  document.getElementById('foodSearch').value = '';
+  if (document.getElementById('foodSearch')) document.getElementById('foodSearch').value = '';
 }
 
 function removeFoodEntry(id) {
@@ -749,6 +857,27 @@ async function doSearch() {
 
 function addFromResult(i) {
   addFoodEntry(window._searchResults[i], parseInt(document.getElementById(`amt_${i}`).value)||100);
+}
+
+function switchFoodTab(tab) {
+  document.getElementById('panelSearch').style.display = tab === 'search' ? '' : 'none';
+  document.getElementById('panelManual').style.display = tab === 'manual' ? '' : 'none';
+  document.getElementById('tabSearch').classList.toggle('active', tab === 'search');
+  document.getElementById('tabManual').classList.toggle('active', tab === 'manual');
+}
+
+function addManualFood() {
+  const name = document.getElementById('manualName').value.trim();
+  const cal  = parseInt(document.getElementById('manualCal').value);
+  const msg  = document.getElementById('manualMsg');
+  if (!name) { msg.style.display=''; msg.textContent='음식 이름을 입력해주세요.'; return; }
+  if (!cal || cal < 1) { msg.style.display=''; msg.textContent='칼로리를 입력해주세요.'; return; }
+  msg.style.display = 'none';
+  // totalCalories를 직접 지정하는 방식으로 저장
+  const food = { name, caloriesPer100g: cal, source: 'manual' };
+  addFoodEntry(food, 100, cal);
+  document.getElementById('manualName').value = '';
+  document.getElementById('manualCal').value = '';
 }
 
 // ─────────────────────────────────────────────
