@@ -225,6 +225,8 @@
 
   /* ── MOBILE OPTIMIZATION ── */
   @media(max-width: 480px) {
+    /* 목표 설정 카드 모바일 */
+    #goalSettingsGrid { grid-template-columns: 1fr 1fr !important; }
     /* Header */
     header { padding: 10px 12px; }
     header h1 { font-size: 1rem; }
@@ -297,10 +299,7 @@
     <span id="dateDisplay"></span>
     <button onclick="navigateDate(1)">&#8250;</button>
   </div>
-  <div style="display:flex;gap:6px;">
-    <button id="todayBtn" onclick="goToday()">오늘</button>
-    <button id="settingsBtn" onclick="openSettings()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:1.1rem;cursor:pointer;border-radius:8px;padding:4px 10px;">⚙️</button>
-  </div>
+  <button id="todayBtn" onclick="goToday()">오늘</button>
 </header>
 
 <!-- 설정 모달 -->
@@ -330,6 +329,32 @@
 </div>
 
 <main>
+
+  <!-- GOAL SETTINGS CARD (collapsible) -->
+  <div class="card" style="margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="card-title" style="margin-bottom:0;">⚙️ 목표 설정</div>
+      <button id="goalSettingsBtn" onclick="toggleGoalSettings()" style="padding:5px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;">입력하기</button>
+    </div>
+    <div id="goalSettingsBody" style="display:none;margin-top:12px;">
+      <div id="goalSettingsGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:flex-end;">
+        <div>
+          <label style="font-size:0.75rem;color:var(--sub);display:block;margin-bottom:4px;">현재 체중 (kg)</label>
+          <input id="setCurrWeight" type="number" step="0.1" min="30" max="200" placeholder="예: 75.5" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:10px;font-size:0.95rem;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:0.75rem;color:var(--sub);display:block;margin-bottom:4px;">목표 체중 (kg)</label>
+          <input id="setGoalWeight" type="number" step="0.1" min="30" max="200" placeholder="예: 70.0" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:10px;font-size:0.95rem;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:0.75rem;color:var(--sub);display:block;margin-bottom:4px;">하루 칼로리 적자 (kcal)</label>
+          <input id="setGoalCal" type="number" step="1" min="0" max="2000" placeholder="예: 500" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:10px;font-size:0.95rem;box-sizing:border-box;">
+        </div>
+        <button onclick="saveSettings()" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:0.9rem;font-weight:600;cursor:pointer;white-space:nowrap;height:38px;">저장</button>
+      </div>
+      <div style="font-size:0.72rem;color:var(--sub);margin-top:6px;">1kg 감량 ≈ 7,700kcal 적자 · 하루 500kcal 적자 시 약 15일 소요</div>
+    </div>
+  </div>
 
   <!-- SUMMARY CARDS -->
   <div class="summary-grid">
@@ -543,6 +568,15 @@ const DAY_TYPES = [
     tdee: BMR + NEAT_ACTIVE + CAL_WEIGHT,
     breakdown: `BMR + NEAT 700 + 웨이트 100`,
     formula: `1,900 + 700 + 100`,
+  },
+  {
+    id: 'weight_cardio',
+    icon: '💪🏃',
+    name: '근력 + 유산소',
+    exerciseCal: CAL_WEIGHT + CAL_CARDIO,
+    tdee: BMR + NEAT_ACTIVE + CAL_WEIGHT + CAL_CARDIO,
+    breakdown: `BMR + NEAT 700 + 웨이트 100 + 유산소 420`,
+    formula: `1,900 + 700 + 100 + 420`,
   },
   {
     id: 'weight_futsal',
@@ -1146,6 +1180,14 @@ function addFromRecent(i) {
 // ─────────────────────────────────────────────
 const GOALS_KEY = 'calorie_goals';
 
+function toggleGoalSettings() {
+  const body = document.getElementById('goalSettingsBody');
+  const btn = document.getElementById('goalSettingsBtn');
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? '입력하기' : '닫기';
+}
+
 function openSettings() {
   const g = JSON.parse(localStorage.getItem(GOALS_KEY) || '{}');
   if (g.currWeight) document.getElementById('setCurrWeight').value = g.currWeight;
@@ -1174,6 +1216,10 @@ function saveSettings() {
 
 function renderGoalBar() {
   const g = JSON.parse(localStorage.getItem(GOALS_KEY) || '{}');
+  // 입력창에 저장된 값 표시
+  if (g.currWeight) document.getElementById('setCurrWeight').value = g.currWeight;
+  if (g.goalWeight) document.getElementById('setGoalWeight').value = g.goalWeight;
+  if (g.goalCal)    document.getElementById('setGoalCal').value = g.goalCal;
   const bar = document.getElementById('goalBar');
   if (!g.currWeight || !g.goalWeight) { bar.style.display = 'none'; return; }
   bar.style.display = '';
